@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace SanityArchiver
+namespace SanityArchiverLogic
 {
     static class Program
     {
@@ -16,7 +16,7 @@ namespace SanityArchiver
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new SanityArchiver());
+            Application.Run(new SanityArchiverForm());
         }
     }
 }

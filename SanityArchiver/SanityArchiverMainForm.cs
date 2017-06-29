@@ -1,136 +1,51 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace SanityArchiver
+namespace SanityArchiverLogic
 {
-    public partial class SanityArchiver : Form
+    public partial class SanityArchiverForm : Form
     {
-        static string filePath;
-        static ListViewItem selectedItem;
-
-        public SanityArchiver()
+        FileOperation fileOperator = new FileOperation();
+        Updates updater;
+        SelectedItem selected;
+        
+        public SanityArchiverForm()
         {
             InitializeComponent();
-            PopulateTreeView(@"C:\");
-            PopulateTreeView(@"E:\");
-        }
-
-        private void PopulateTreeView(string destination)
-        {
-            TreeNode rootNode;
-            try
-            {
-                DirectoryInfo info = new DirectoryInfo(destination);
-                if (info.Exists)
-                {
-                    rootNode = new TreeNode(info.Name);
-                    rootNode.Tag = info;
-                    GetDirectories(info.GetDirectories(), rootNode);
-                    FilesTreeView.Nodes.Add(rootNode);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-        }
-
-        private void GetDirectories(DirectoryInfo[] subDirs, TreeNode nodeToAddTo)
-        {
-            try
-            {
-                TreeNode aNode;
-                DirectoryInfo[] subSubDirs;
-                foreach (DirectoryInfo subDir in subDirs)
-                {
-                    aNode = new TreeNode(subDir.Name, 0, 0);
-                    aNode.Tag = subDir;
-                    aNode.ImageKey = "folder";
-                    subSubDirs = subDir.GetDirectories();
-                    if (subSubDirs.Length != 0)
-                    {
-                        GetDirectories(subSubDirs, aNode);
-                    }
-                    nodeToAddTo.Nodes.Add(aNode);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
+            updater = new Updates(filesListView, FilesTreeView, pathTextBox, searchTextBox);
+            //updater.PopulateTreeView(@"C:\");
+            updater.PopulateTreeView(@"E:\");
+            
         }
 
         private void FilesTreeView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
             TreeNode newSelected = e.Node;
             DirectoryInfo nodeDirInfo = (DirectoryInfo)newSelected.Tag;
-            refreshListView(nodeDirInfo);
-        }
-
-
-
-        private void refreshListView(DirectoryInfo newDir)
-        {
-            pathTextBox.Text = newDir.ToString();
-            filesListView.Items.Clear();
-            ListViewItem.ListViewSubItem[] subItems;
-            ListViewItem item = null;
-            foreach (DirectoryInfo dir in newDir.GetDirectories())
-            {
-                item = new ListViewItem(dir.Name, 0);
-                subItems = new ListViewItem.ListViewSubItem[]
-                          {new ListViewItem.ListViewSubItem(item, "Directory"),
-                          new ListViewItem.ListViewSubItem(item,
-                          dir.LastAccessTime.ToShortDateString()),
-                          new ListViewItem.ListViewSubItem(item, ""),
-                          new ListViewItem.ListViewSubItem(item, dir.FullName) };
-                item.SubItems.AddRange(subItems);
-                filesListView.Items.Add(item);
-            }
-            foreach (FileInfo file in newDir.GetFiles())
-            {
-                item = new ListViewItem(file.Name, 1);
-                subItems = new ListViewItem.ListViewSubItem[]
-                          { new ListViewItem.ListViewSubItem(item, "File"),
-                            new ListViewItem.ListViewSubItem(item,
-                            file.LastAccessTime.ToShortDateString()),
-                            new ListViewItem.ListViewSubItem(item, (file.Length/1024).ToString()+" MB"),
-                            new ListViewItem.ListViewSubItem(item, file.FullName)};
-
-                item.SubItems.AddRange(subItems);
-                filesListView.Items.Add(item);
-            }
-
-            filesListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-
+            updater.refreshListView(nodeDirInfo);
         }
 
         private void goToFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
             filesListView.Items.Clear();
-            DirectoryInfo newDir = new DirectoryInfo(filePath);
-            refreshListView(newDir);
+            DirectoryInfo newDir = new DirectoryInfo(selected.filepath);
+            updater.refreshListView(newDir);
         }
 
         private void filesListView_DoubleClick(object sender, EventArgs e)
         {
-            if (selectedItem.SubItems[1].Text == "Directory")
+            try
             {
-                DirectoryInfo newDir = new DirectoryInfo(filePath);
-                refreshListView(newDir);
+                if (selected.IsItDir())
+                    updater.refreshListView(new DirectoryInfo(selected.filepath));
+                else
+                    Process.Start(selected.filepath);
             }
-            else
+            catch (Exception f)
             {
-                Process.Start(filePath);
+                Console.WriteLine(f.Message);
             }
         }
 
@@ -141,7 +56,7 @@ namespace SanityArchiver
                 try
                 {
                     DirectoryInfo newDir = new DirectoryInfo(pathTextBox.Text);
-                    refreshListView(newDir);
+                    updater.refreshListView(newDir);
                 }
                 catch (Exception f)
                 {
@@ -156,7 +71,7 @@ namespace SanityArchiver
             try
             {
                 DirectoryInfo newDir = new DirectoryInfo(pathTextBox.Text);
-                refreshListView(newDir);
+                updater.refreshListView(newDir);
             }
             catch (Exception f)
             {
@@ -170,31 +85,7 @@ namespace SanityArchiver
             {
                 try
                 {
-                    string[] dirs = Directory.GetFiles(pathTextBox.Text, searchTextBox.Text);
-                    ListViewItem.ListViewSubItem[] subItems;
-                    ListViewItem item = null;
-                    filesListView.Items.Clear();
-
-                    foreach (string dir in dirs)
-                    {
-                        Console.WriteLine(dir);
-                        FileInfo file = new FileInfo(dir);
-                        //refreshListView(new DirectoryInfo(file.Directory.ToString()));
-
-                        item = new ListViewItem(file.Name, 1);
-                        subItems = new ListViewItem.ListViewSubItem[]
-                                    { new ListViewItem.ListViewSubItem(item, "File"),
-                        new ListViewItem.ListViewSubItem(item,
-                        file.LastAccessTime.ToShortDateString()),
-                        new ListViewItem.ListViewSubItem(item, (file.Length/1024).ToString()+" MB"),
-                        new ListViewItem.ListViewSubItem(item, file.FullName)};
-
-                        item.SubItems.AddRange(subItems);
-                        filesListView.Items.Add(item);
-
-
-
-                    }
+                    updater.Search();
                     filesListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
                 }
                 catch (Exception f)
@@ -208,31 +99,7 @@ namespace SanityArchiver
         {
             try
             {
-                string[] dirs = Directory.GetFiles(pathTextBox.Text, searchTextBox.Text);
-                ListViewItem.ListViewSubItem[] subItems;
-                ListViewItem item = null;
-                filesListView.Items.Clear();
-
-                foreach (string dir in dirs)
-                {
-                    Console.WriteLine(dir);
-                    FileInfo file = new FileInfo(dir);
-                    //refreshListView(new DirectoryInfo(file.Directory.ToString()));
-
-                    item = new ListViewItem(file.Name, 1);
-                    subItems = new ListViewItem.ListViewSubItem[]
-                                { new ListViewItem.ListViewSubItem(item, "File"),
-                        new ListViewItem.ListViewSubItem(item,
-                        file.LastAccessTime.ToShortDateString()),
-                        new ListViewItem.ListViewSubItem(item, (file.Length/1024).ToString()+" MB"),
-                        new ListViewItem.ListViewSubItem(item, file.FullName)};
-
-                    item.SubItems.AddRange(subItems);
-                    filesListView.Items.Add(item);
-
-
-
-                }
+                updater.Search();
                 filesListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
             }
             catch (Exception f)
@@ -243,8 +110,63 @@ namespace SanityArchiver
 
         private void filesListView_SelectedIndexChanged(object sender, EventArgs e)
         {
-            filePath = filesListView.FocusedItem.SubItems[4].Text;
-            selectedItem = filesListView.FocusedItem;
+            try
+            {
+                if (filesListView.FocusedItem.SubItems[1].Text == "Directory")
+                {
+                    DirectoryInfo targetdir = new DirectoryInfo(filesListView.FocusedItem.SubItems[4].Text);
+                    selected = new SelectedItem(targetdir);
+
+                }
+                else
+                {
+                    FileInfo targetfile = new FileInfo(filesListView.FocusedItem.SubItems[5].Text);
+                    selected = new SelectedItem(targetfile);
+
+                }
+                pathTextBox.Text = selected.filepath;
+            }
+            catch (Exception f)
+            {
+                Console.WriteLine(f.Message);
+            }
+        }
+
+        private void compressToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FileInfo targetFile = new FileInfo(selected.filepath);
+            if (selected.IsItDir())
+                fileOperator.Compress(new DirectoryInfo(targetFile.FullName));
+            else
+                fileOperator.Compress(targetFile);
+
+            updater.refreshListView(new DirectoryInfo(targetFile.DirectoryName));
+        }
+
+        private void decompressToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FileInfo targetFile = new FileInfo(selected.filepath);
+            if (selected.IsItDir())
+                fileOperator.Decompress(new DirectoryInfo(targetFile.FullName));
+            else
+                fileOperator.Decompress(targetFile);
+            updater.refreshListView(new DirectoryInfo(targetFile.DirectoryName));
+        }
+
+        private DirectoryInfo GetCurrentDirectory()
+        {
+            return new DirectoryInfo(selected.filepath);
+        }
+
+        private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            selected.Delete();
+        }
+
+        private void encryptToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FileInfo targetFile = new FileInfo(selected.filepath);
+            fileOperator.Encrypt(targetFile);
         }
     }
 }

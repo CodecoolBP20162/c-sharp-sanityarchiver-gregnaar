@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace SanityArchiver.Properties
+namespace SanityArchiverLogic.Properties
 {
 
 
