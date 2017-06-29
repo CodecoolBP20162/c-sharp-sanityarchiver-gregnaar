@@ -3,34 +3,36 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
 
-namespace SanityArchiverLogic
+namespace SanityArchiver
 {
     public partial class SanityArchiverForm : Form
     {
         FileOperation fileOperator = new FileOperation();
+        History history = History.Singleton;
         Updates updater;
         SelectedItem selected;
-        
+
         public SanityArchiverForm()
         {
             InitializeComponent();
             updater = new Updates(filesListView, FilesTreeView, pathTextBox, searchTextBox);
             //updater.PopulateTreeView(@"C:\");
             updater.PopulateTreeView(@"E:\");
-            
+
         }
 
         private void FilesTreeView_NodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
         {
             TreeNode newSelected = e.Node;
-            DirectoryInfo nodeDirInfo = (DirectoryInfo)newSelected.Tag;
+
+            DirectoryInfo nodeDirInfo = new DirectoryInfo(newSelected.FullPath);
             updater.refreshListView(nodeDirInfo);
         }
 
         private void goToFolderToolStripMenuItem_Click(object sender, EventArgs e)
         {
             filesListView.Items.Clear();
-            DirectoryInfo newDir = new DirectoryInfo(selected.filepath);
+            DirectoryInfo newDir = new DirectoryInfo(selected.filePath);
             updater.refreshListView(newDir);
         }
 
@@ -38,10 +40,10 @@ namespace SanityArchiverLogic
         {
             try
             {
-                if (selected.IsItDir())
-                    updater.refreshListView(new DirectoryInfo(selected.filepath));
+                if (selected.IsItDirectory())
+                    updater.refreshListView(new DirectoryInfo(selected.filePath));
                 else
-                    Process.Start(selected.filepath);
+                    Process.Start(selected.filePath);
             }
             catch (Exception f)
             {
@@ -90,7 +92,7 @@ namespace SanityArchiverLogic
                 }
                 catch (Exception f)
                 {
-                    Console.WriteLine("The process failed: {0}", f.ToString());
+                    Console.WriteLine(f.Message);
                 }
             }
         }
@@ -120,11 +122,10 @@ namespace SanityArchiverLogic
                 }
                 else
                 {
-                    FileInfo targetfile = new FileInfo(filesListView.FocusedItem.SubItems[5].Text);
+                    FileInfo targetfile = new FileInfo(filesListView.FocusedItem.SubItems[4].Text);
                     selected = new SelectedItem(targetfile);
 
                 }
-                pathTextBox.Text = selected.filepath;
             }
             catch (Exception f)
             {
@@ -133,40 +134,64 @@ namespace SanityArchiverLogic
         }
 
         private void compressToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            FileInfo targetFile = new FileInfo(selected.filepath);
-            if (selected.IsItDir())
-                fileOperator.Compress(new DirectoryInfo(targetFile.FullName));
+        {            
+            if (selected.GetDir() != null)
+                fileOperator.Compress(selected.GetDir());
             else
-                fileOperator.Compress(targetFile);
+                fileOperator.Compress(selected.GetFIle());
 
-            updater.refreshListView(new DirectoryInfo(targetFile.DirectoryName));
+            updater.ReloadContent();
         }
 
         private void decompressToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            FileInfo targetFile = new FileInfo(selected.filepath);
-            if (selected.IsItDir())
+            FileInfo targetFile = new FileInfo(selected.filePath);
+            if (selected.IsItDirectory())
                 fileOperator.Decompress(new DirectoryInfo(targetFile.FullName));
             else
                 fileOperator.Decompress(targetFile);
-            updater.refreshListView(new DirectoryInfo(targetFile.DirectoryName));
-        }
-
-        private DirectoryInfo GetCurrentDirectory()
-        {
-            return new DirectoryInfo(selected.filepath);
+            updater.ReloadContent();
         }
 
         private void deleteToolStripMenuItem_Click(object sender, EventArgs e)
         {
             selected.Delete();
+            updater.ReloadContent();
         }
 
         private void encryptToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            FileInfo targetFile = new FileInfo(selected.filepath);
+            FileInfo targetFile = new FileInfo(selected.filePath);
             fileOperator.Encrypt(targetFile);
+        }
+
+        private void decryptToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            FileInfo targetFile = new FileInfo(selected.filePath);
+            fileOperator.Decrypt(targetFile);
+        }
+
+        private void propertiesToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var Properties = new PropertiesForm(selected);
+            Properties.ShowDialog();
+        }
+
+        private void BackButton_Click(object sender, EventArgs e)
+        {
+            updater.refreshListView(new DirectoryInfo(history.GoBackInHistory()),true);
+        }
+
+        private void folderToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            fileOperator.CreateNewFolder(SelectedItem.currentDir);
+            updater.ReloadContent();
+        }
+
+        private void fileToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            fileOperator.CreateNewFile(SelectedItem.currentDir);
+            updater.ReloadContent();
         }
     }
 }

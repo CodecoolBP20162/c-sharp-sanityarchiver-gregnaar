@@ -6,15 +6,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SanityArchiverLogic
+namespace SanityArchiver
 {
     public class SelectedItem
     {
-        public string filepath { get; set; }
+        public string filePath { get; set; }
+        public string dirPath { get; set; }
+        public string parentPath { get; set; }
         public string name { get; set; }
         public string type { get; set; }
         public FileInfo file { get; set; }
         public DirectoryInfo dir { get; set; }
+        public DriveInfo drive { get; set; }
+
+        public static string currentDir {get; set;}
 
         SelectedItem()
         {
@@ -23,21 +28,27 @@ namespace SanityArchiverLogic
 
         public SelectedItem(FileInfo file)
         {
-            filepath = file.FullName;
+            filePath = file.FullName;
+            dirPath = file.DirectoryName;
             name = file.Name;
             type = "File";
             this.file = file;
+            setParent();
+            SetDrive();
         }
 
         public SelectedItem(DirectoryInfo dir)
         {
-            filepath = dir.FullName;
+            filePath = dir.FullName;
+            dirPath = dir.FullName;
             name = dir.Name;
             type = "Directory";
             this.dir = dir;
+            setParent();
+            SetDrive();
         }
 
-        public bool IsItDir()
+        public bool IsItDirectory()
         {
             if (this.type == "Directory")
                 return true;
@@ -49,14 +60,82 @@ namespace SanityArchiverLogic
         {
             try
             {
-                if (IsItDir())
+                if (IsItDirectory())
                     this.dir.Delete();
                 else
                     this.file.Delete();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
+            }
+            
+        }
+
+        public FileInfo GetFIle()
+        {
+            if (!IsItDirectory())
+                return this.file;
+            else
+                return null;
+        }
+
+        public DirectoryInfo GetDir()
+        {
+            if (IsItDirectory())
+                return this.dir;
+            else
+                return null;
+        }
+
+        private void setParent()
+        {
+            try
+            {
+                if (IsItDirectory())
+                {
+                    if (dir.Parent.Parent.FullName != null)
+                    {
+                        parentPath = dir.Parent.Parent.FullName;
+                    }
+                    if (dir.Parent.FullName != null)
+                    {
+                        parentPath = dir.Parent.FullName;
+                    }
+                }
+                else
+                {
+                    parentPath = file.Directory.Parent.FullName;
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        public void SetDrive()
+        {
+            DriveInfo[] allDrives = DriveInfo.GetDrives();
+            foreach (DriveInfo d in allDrives)
+            {
+                try
+                {
+                    if (d.Name == dir.Root.ToString())
+                    {
+                        drive = d;
+                        break;
+                    }
+                    if (d.Name == file.Directory.Root.ToString())
+                    {
+                        drive = d;
+                        break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
             }
         }
     }
@@ -67,22 +146,28 @@ namespace SanityArchiverLogic
 
         public void Compress(FileInfo fi)
         {
-            using (FileStream originalFileStream = fi.OpenRead())
+            try
             {
-                if ((File.GetAttributes(fi.FullName) &
-                   FileAttributes.Hidden) != FileAttributes.Hidden & fi.Extension != ".gz")
+                using (FileStream originalFileStream = fi.OpenRead())
                 {
-                    using (FileStream compressedFileStream = File.Create(fi.FullName + ".gz"))
+                    if ((File.GetAttributes(fi.FullName) &
+                       FileAttributes.Hidden) != FileAttributes.Hidden & fi.Extension != ".gz")
                     {
-                        using (GZipStream compressionStream = new GZipStream(compressedFileStream,
-                           CompressionMode.Compress))
+                        using (FileStream compressedFileStream = File.Create(fi.FullName + ".gz"))
                         {
-                            originalFileStream.CopyTo(compressionStream);
-
+                            using (GZipStream compressionStream = new GZipStream(compressedFileStream,
+                               CompressionMode.Compress))
+                            {
+                                originalFileStream.CopyTo(compressionStream);
+                            }
                         }
                     }
-                }
 
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
             }
         }
 
@@ -96,28 +181,28 @@ namespace SanityArchiverLogic
 
         public void Decompress(FileInfo fi)
         {
-            using (FileStream inFile = fi.OpenRead())
+            try
             {
-                // Get original file extension, for example
-                // "doc" from report.doc.gz.
-                string curFile = fi.FullName;
-                string origName = curFile.Remove(curFile.Length -
-                        fi.Extension.Length);
-
-                //Create the decompressed file.
-                using (FileStream outFile = File.Create(origName))
+                using (FileStream inFile = fi.OpenRead())
                 {
-                    using (GZipStream Decompress = new GZipStream(inFile,
-                            CompressionMode.Decompress))
+
+                    string curFile = fi.FullName;
+                    string origName = curFile.Remove(curFile.Length -
+                            fi.Extension.Length);
+
+                    using (FileStream outFile = File.Create(origName))
                     {
-                        // Copy the decompression stream 
-                        // into the output file.
-                        Decompress.CopyTo(outFile);
-
-                        Console.WriteLine("Decompressed: {0}", fi.Name);
-
+                        using (GZipStream Decompress = new GZipStream(inFile,
+                                CompressionMode.Decompress))
+                        {
+                            Decompress.CopyTo(outFile);
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
             }
         }
 
@@ -128,17 +213,62 @@ namespace SanityArchiverLogic
                 Decompress(fi);
             }
         }
-        
+
         public void Encrypt(FileInfo fi)
         {
-            try {
+            try
+            {
                 //File.Encrypt(fi.Name);
                 fi.Encrypt();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
             }
+        }
+
+        public void Decrypt(FileInfo fi)
+        {
+            try
+            {
+                //File.Decrypt(fi.Name);
+                fi.Decrypt();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        public void Rename(FileInfo fi, string newName)
+        {
+            File.Move(fi.FullName, SelectedItem.currentDir+ "\\" + newName);
+        }
+
+        public void Rename(DirectoryInfo dir, string newName)
+        {
+            Directory.Move(dir.FullName, SelectedItem.currentDir + "\\" + newName);
+        }
+
+        public void CreateNewFolder(string path)
+        {
+            Directory.CreateDirectory(path + "\\New Folder");
+        }
+
+        public void CreateNewFile(string path)
+        {
+            File.CreateText(path + "\\New File.txt");
+        }
+
+        public string GetFolderSize(DirectoryInfo dir)
+        {
+            FileInfo[] files = dir.GetFiles();
+            long total = 0;
+            foreach(FileInfo fi in files)
+            {
+                total += fi.Length;
+            }
+            return (total / 1024).ToString();
         }
     }
 }
