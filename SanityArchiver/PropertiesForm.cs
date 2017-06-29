@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SanityArchiverLogic;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -26,7 +27,6 @@ namespace SanityArchiver
             {
                 this.textBoxName.Text = selected.dir.Name;
                 this.textBoxSize.Text = fileOperator.GetFolderSize(selected.dir)+" MB";
-                //this.checkBoxReadOnly.Checked = selected.file.IsReadOnly;
             }
             else
             {
@@ -63,7 +63,6 @@ namespace SanityArchiver
             string newName = textBoxName.Text;
             if (selected.IsItDirectory())
                 fileOperator.Rename(selected.dir, newName);
-
             else
                 fileOperator.Rename(selected.file, newName);
         }

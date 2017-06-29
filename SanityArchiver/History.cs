@@ -11,7 +11,6 @@ namespace SanityArchiver
     {
         public List<string> history = new List<string>();
         public int timesGoingBack = -1;
-        //implment history
         private static History singleton = null;
         private static readonly object padlock = new object();
 
@@ -40,7 +39,6 @@ namespace SanityArchiver
         {
             history.Add(path);
             timesGoingBack = -1;
-            Console.WriteLine("Adding to history");
         }
 
         public void ClearHistory()
@@ -54,16 +52,12 @@ namespace SanityArchiver
             {
                 string previousPath = history[history.Count() + timesGoingBack-1];
                 timesGoingBack--;
-                Console.WriteLine(history.Count());
-                Console.WriteLine(timesGoingBack);
-                Console.WriteLine(previousPath);
                 return previousPath;
             }
             catch(Exception e)
             {
                 Console.WriteLine(e.Message);
-                return "C:\\";
-                
+                return "E:\\";
             }
         }
     }

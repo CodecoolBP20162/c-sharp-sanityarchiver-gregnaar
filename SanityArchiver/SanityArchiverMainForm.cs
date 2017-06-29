@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SanityArchiverLogic;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
@@ -134,7 +135,7 @@ namespace SanityArchiver
         }
 
         private void compressToolStripMenuItem_Click(object sender, EventArgs e)
-        {            
+        {
             if (selected.GetDir() != null)
                 fileOperator.Compress(selected.GetDir());
             else
@@ -157,6 +158,7 @@ namespace SanityArchiver
         {
             selected.Delete();
             updater.ReloadContent();
+            updater.ReloadTreeView();
         }
 
         private void encryptToolStripMenuItem_Click(object sender, EventArgs e)
@@ -179,13 +181,14 @@ namespace SanityArchiver
 
         private void BackButton_Click(object sender, EventArgs e)
         {
-            updater.refreshListView(new DirectoryInfo(history.GoBackInHistory()),true);
+            updater.refreshListView(new DirectoryInfo(history.GoBackInHistory()), true);
         }
 
         private void folderToolStripMenuItem_Click(object sender, EventArgs e)
         {
             fileOperator.CreateNewFolder(SelectedItem.currentDir);
             updater.ReloadContent();
+            updater.ReloadTreeView();
         }
 
         private void fileToolStripMenuItem_Click(object sender, EventArgs e)

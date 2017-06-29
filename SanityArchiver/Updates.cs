@@ -34,28 +34,34 @@ namespace SanityArchiver
 
         public void refreshListView(DirectoryInfo newDir, bool goingback)
         {
-            pathTextBox.Text = newDir.FullName;
-            SelectedItem.currentDir = newDir.FullName;
-
-            if (!goingback)
-                history.AddToHistory(pathTextBox.Text);
-
-            
-            filesListView.Items.Clear();
-            ListViewItem item = null;
-            foreach (DirectoryInfo dir in newDir.GetDirectories())
+            try
             {
-                item = new ListViewItem(dir.Name, 0);
-                UpdateDirectoriesInListView(dir, item);
+                pathTextBox.Text = newDir.FullName;
+                SelectedItem.currentDir = newDir.FullName;
+
+                if (!goingback)
+                    history.AddToHistory(pathTextBox.Text);
+
+
+                filesListView.Items.Clear();
+                ListViewItem item = null;
+                foreach (DirectoryInfo dir in newDir.GetDirectories())
+                {
+                    item = new ListViewItem(dir.Name, 0);
+                    UpdateDirectoriesInListView(dir, item);
+                }
+                foreach (FileInfo file in newDir.GetFiles())
+                {
+                    item = new ListViewItem(file.Name, 1);
+                    UpdateFilesInListview(file, item);
+                }
+
+                filesListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
             }
-            foreach (FileInfo file in newDir.GetFiles())
+            catch (Exception e)
             {
-                item = new ListViewItem(file.Name, 1);
-                UpdateFilesInListview(file, item);
+                Console.WriteLine(e.Message);
             }
-
-            filesListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
-
         }
 
         public void UpdateFilesInListview(FileInfo file, ListViewItem item)
@@ -90,12 +96,16 @@ namespace SanityArchiver
         public void ReloadContent()
         {
             refreshListView(new DirectoryInfo(SelectedItem.currentDir), false);
-            //PopulateTreeView("E:\\");
+        }
+
+        public void ReloadTreeView()
+        {
+            filesTreeView.Nodes.Clear();
+            PopulateTreeView("E:\\");
         }
 
         public void PopulateTreeView(string destination)
         {
-            //filesTreeView.Nodes.Clear();
             TreeNode rootNode;
             try
             {
@@ -155,6 +165,5 @@ namespace SanityArchiver
 
             filesListView.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
         }
-
     }
 }
